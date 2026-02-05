@@ -1,10 +1,30 @@
 #include "emu.h"
 
 #include "cpu/g65816/g65816.h"
+#include "cpu/g65816/g65816cm.h"
 #include "sound/ay8910.h"
 #include "video/tms9928a.h"
 
 #include "machine/rescap.h"  // for set_resistors_load
+
+// Unlike other W65C816 variants, the W65C265 does *not* start in emulation mode
+// (though this doesn't seem to be documented anywhere), so we need to make a
+// subclass to capture this behavior.
+class g65265_device : public g65816_device
+{
+public:
+  using g65816_device::g65816_device;
+
+protected:
+  virtual void device_reset() override ATTR_COLD
+  {
+    g65816_device::device_reset();
+    g65816i_set_flag_e(EFLAG_CLEAR);
+  }
+};
+
+DECLARE_DEVICE_TYPE(G65265, g65265_device)
+DEFINE_DEVICE_TYPE(G65265, g65265_device, "w65c265", "WDC W65C265")
 
 namespace
 {
@@ -26,7 +46,7 @@ namespace
     void gtvip(machine_config &config);
 
   private:
-    required_device<g65816_device> m_maincpu;
+    required_device<g65265_device> m_maincpu;
     required_device<ym2149_device> m_ymsnd;
     required_device<tms9918_device> m_vdp;
 
@@ -37,7 +57,7 @@ namespace
 
   void gtvip_state::gtvip(machine_config &config)
   {
-    G65816(config, m_maincpu, XTAL(8'000'000));
+    G65816(config, m_maincpu, XTAL(3'686'400));
     m_maincpu->set_addrmap(AS_PROGRAM, &gtvip_state::main_memmap);
 
     // TODO: figure out how to set up sound chip
