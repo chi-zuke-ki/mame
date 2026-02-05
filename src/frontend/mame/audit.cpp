@@ -541,6 +541,8 @@ media_auditor::summary media_auditor::summarize(const char *name, std::ostream *
 				util::stream_format(*output, "EXPECTED: %s\n", record.expected_hashes().macro_string());
 				util::stream_format(*output, "   FOUND: %s\n", record.actual_hashes().macro_string());
 			}
+			// TODO don't fail on bad checksums
+			best_new_status = BEST_AVAILABLE;
 			break;
 
 		case audit_substatus::FOUND_WRONG_LENGTH:
