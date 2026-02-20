@@ -29,10 +29,10 @@ DEFINE_DEVICE_TYPE(G65265, g65265_device, "w65c265", "WDC W65C265")
 namespace
 {
 
-class gtvip_state : public driver_device
+class retcom87_state : public driver_device
 {
 public:
-	gtvip_state(const machine_config &mconfig, device_type type, const char *tag)
+	retcom87_state(const machine_config &mconfig, device_type type, const char *tag)
 			: driver_device(mconfig, type, tag)
 			, m_maincpu(*this, "maincpu")
 			, m_ymsnd_0(*this, "ym2149_0")
@@ -42,7 +42,7 @@ public:
 	}
 
 	void init() {}
-	void gtvip(machine_config &config);
+	void retcom87(machine_config &config);
 
 private:
 	required_device<g65265_device> m_maincpu;
@@ -53,10 +53,10 @@ private:
 	void main_memmap(address_map &map);
 };
 
-void gtvip_state::gtvip(machine_config &config)
+void retcom87_state::retcom87(machine_config &config)
 {
 	G65265(config, m_maincpu, XTAL(3'686'400));
-	m_maincpu->set_addrmap(AS_PROGRAM, &gtvip_state::main_memmap);
+	m_maincpu->set_addrmap(AS_PROGRAM, &retcom87_state::main_memmap);
 
 	// sound chip
 	YM2149(config, m_ymsnd_0, XTAL(1'843'200));
@@ -84,7 +84,7 @@ void gtvip_state::gtvip(machine_config &config)
 //
 // see RetCom87 docs on memory map:
 // https://github.com/lantertronics/RetCom87-hardware/wiki/RetCom87-Memory-Map
-void gtvip_state::main_memmap(address_map &map)
+void retcom87_state::main_memmap(address_map &map)
 {
 	// 32kB SRAM
 	map(0x0000, 0x7FFF).ram();
@@ -120,11 +120,11 @@ void gtvip_state::main_memmap(address_map &map)
 	// When Controller Select Pin output (P51, pin 4, J4-P5x connector) is 0: [Start A Start A 0 0 Down Up]
 }
 
-INPUT_PORTS_START(gtvip_inputs)
+INPUT_PORTS_START(retcom87_inputs)
 
 INPUT_PORTS_END
 
-ROM_START(gtvip)
+ROM_START(retcom87)
 ROM_REGION(0x10000, "maincpu", 0)
 
 // HACK: for now, uncomment the ROM_LOAD line for the corresponding program to run
@@ -143,4 +143,4 @@ ROM_END
 
 } // namespace
 
-COMP(2023, gtvip, 0, 0, gtvip, gtvip_inputs, gtvip_state, init, "GT", "GT VIP", MACHINE_NOT_WORKING)
+COMP(2023, retcom87, 0, 0, retcom87, retcom87_inputs, retcom87_state, init, "Lantertronics", "RetCom87", MACHINE_NOT_WORKING)
