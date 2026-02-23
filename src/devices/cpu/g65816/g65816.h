@@ -1546,6 +1546,45 @@ public:
 };
 
 
+// https://www.westerndesigncenter.com/wdc/documentation/w65c265s.pdf
+class g65265_device : public g65816_device
+{
+public:
+	g65265_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+	auto out_pd0_cb() { return m_out_port_cb[0].bind(); }
+	auto out_pd1_cb() { return m_out_port_cb[1].bind(); }
+	auto out_pd2_cb() { return m_out_port_cb[2].bind(); }
+	auto out_pd3_cb() { return m_out_port_cb[3].bind(); }
+	auto out_pd4_cb() { return m_out_port_cb[4].bind(); }
+	auto out_pd5_cb() { return m_out_port_cb[5].bind(); }
+	auto out_pd6_cb() { return m_out_port_cb[6].bind(); }
+	auto out_pd7_cb() { return m_out_port_cb[7].bind(); }
+
+protected:
+	// device-level overrides
+	virtual void device_reset() override ATTR_COLD;
+
+	// device_state_interface overrides
+	virtual void state_import(const device_state_entry &entry) override;
+	virtual void state_export(const device_state_entry &entry) override;
+
+private:
+	void g65265_map(address_map &map);
+
+	template<int N> u8 pd_r(offs_t offset);
+	template<int N> u8 pdd_r(offs_t offset);
+
+	template<int N> void pd_w(offs_t offset, u8 data);
+	template<int N> void pdd_w(offs_t offset, u8 data);
+
+	u8 m_port_data_reg[8];
+	u8 m_port_data_direction_reg[7];
+
+	devcb_write8::array<8> m_out_port_cb;
+};
+
+
 class _5a22_device : public g65816_device
 {
 public:
@@ -1578,6 +1617,7 @@ protected:
 
 DECLARE_DEVICE_TYPE(G65816, g65816_device)
 DECLARE_DEVICE_TYPE(G65802, g65802_device)
+DECLARE_DEVICE_TYPE(G65265, g65265_device)
 DECLARE_DEVICE_TYPE(_5A22,  _5a22_device)
 
 

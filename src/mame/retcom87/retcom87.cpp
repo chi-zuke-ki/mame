@@ -1,30 +1,12 @@
 #include "emu.h"
 
+#include "bus/sms_ctrl/controllers.h"
+#include "bus/sms_ctrl/smsctrl.h"
 #include "cpu/g65816/g65816.h"
-#include "cpu/g65816/g65816cm.h"
 #include "sound/ay8910.h"
 #include "video/tms9928a.h"
 
 #include "speaker.h"
-
-// Unlike other W65C816 variants, the W65C265 does *not* start in emulation mode
-// (though this doesn't seem to be documented anywhere), so we need to make a
-// subclass to capture this behavior.
-class g65265_device : public g65816_device
-{
-public:
-	using g65816_device::g65816_device;
-
-protected:
-	virtual void device_reset() override ATTR_COLD
-	{
-		g65816_device::device_reset();
-		g65816i_set_flag_e(EFLAG_CLEAR);
-	}
-};
-
-DECLARE_DEVICE_TYPE(G65265, g65265_device)
-DEFINE_DEVICE_TYPE(G65265, g65265_device, "w65c265", "WDC W65C265")
 
 namespace
 {
@@ -38,8 +20,8 @@ public:
 			, m_ymsnd_0(*this, "ym2149_0")
 			, m_ymsnd_1(*this, "ym2149_1")
 			, m_vdp(*this, "tms9918")
-	{
-	}
+			, m_md_ctrl_ports(*this, { "md_ctrl_0", "md_ctrl_1" })
+	{ }
 
 	void init() {}
 	void retcom87(machine_config &config);
@@ -49,8 +31,11 @@ private:
 	required_device<ym2149_device> m_ymsnd_0;
 	required_device<ym2149_device> m_ymsnd_1;
 	required_device<tms9918_device> m_vdp;
+	required_device_array<sms_control_port_device, 2> m_md_ctrl_ports;
 
 	void main_memmap(address_map &map);
+
+	void pd5_write(u8 data);
 };
 
 void retcom87_state::retcom87(machine_config &config)
@@ -78,6 +63,13 @@ void retcom87_state::retcom87(machine_config &config)
 	// define screen output
 	SCREEN(config, "screen", SCREEN_TYPE_RASTER);
 	m_vdp->set_screen("screen");
+
+	// controllers
+	for (auto &port : m_md_ctrl_ports) {
+		SMS_CONTROL_PORT(config, port, sms_control_port_devices, SMS_CTRL_OPTION_MD_PAD);
+	}
+
+	m_maincpu->out_pd5_cb().set(FUNC(retcom87_state::pd5_write));
 }
 
 // see MAME docs on memory: https://docs.mamedev.org/techspecs/memory.html
@@ -118,6 +110,18 @@ void retcom87_state::main_memmap(address_map &map)
 	// DF00-DF03: Controller 1 through 4 inputs (aliased to DF04-DF07)
 	// When Controller Select Pin output (P51, pin 4, J4-P5x connector) is 1: [C B C B Right Left Down Up]
 	// When Controller Select Pin output (P51, pin 4, J4-P5x connector) is 0: [Start A Start A 0 0 Down Up]
+	map(0xdf00, 0xdf00).r(m_md_ctrl_ports[0], FUNC(sms_control_port_device::in_r));
+	map(0xdf01, 0xdf01).r(m_md_ctrl_ports[1], FUNC(sms_control_port_device::in_r));
+}
+
+// Write to port 5 data register
+void retcom87_state::pd5_write(u8 data)
+{
+	// Port 5 bit 1 (P51) maps to bit 6 of controller input
+	data = BIT(data, 1) << 6;
+	for (auto &ctrl_port : m_md_ctrl_ports) {
+		ctrl_port->out_w(data, /*mask=*/0x40);
+	}
 }
 
 INPUT_PORTS_START(retcom87_inputs)

@@ -104,6 +104,7 @@ TODO general:
 
 DEFINE_DEVICE_TYPE(G65816, g65816_device, "w65c816", "WDC W65C816")
 DEFINE_DEVICE_TYPE(G65802, g65802_device, "w65c802", "WDC W65C802")
+DEFINE_DEVICE_TYPE(G65265, g65265_device, "w65c265", "WDC W65C265")
 DEFINE_DEVICE_TYPE(_5A22,  _5a22_device,  "5a22",    "Ricoh 5A22")
 
 enum
@@ -1092,6 +1093,89 @@ int g65816_device::bus_5A22_cycle_burst(unsigned addr)
 	if((addr - 0x4000) & 0x7e00) return 0;
 
 	return 6;
+}
+
+
+g65265_device::g65265_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+	: g65816_device(mconfig, G65265, tag, owner, clock, CPU_TYPE_W65C816, address_map_constructor(FUNC(g65265_device::g65265_map), this))
+	, m_out_port_cb(*this)
+{
+}
+
+void g65265_device::device_reset()
+{
+	g65816_device::device_reset();
+
+	// Unlike other W65C816 variants, the W65C265 does *not* start in emulation mode.
+	g65816i_set_flag_e(EFLAG_CLEAR);
+
+	m_port_data_reg[0] = 0x00;
+	m_port_data_reg[1] = 0x00;
+	m_port_data_reg[2] = 0x00;
+	m_port_data_reg[3] = 0x00;
+	m_port_data_reg[4] = 0x00;
+	m_port_data_reg[5] = 0x00;
+	m_port_data_reg[6] = 0x00;
+	m_port_data_reg[7] = 0xFF;
+
+	m_port_data_direction_reg[0] = 0x00;
+	m_port_data_direction_reg[1] = 0x00;
+	m_port_data_direction_reg[2] = 0x00;
+	m_port_data_direction_reg[3] = 0x00;
+	m_port_data_direction_reg[4] = 0x00;
+	m_port_data_direction_reg[5] = 0x00;
+	m_port_data_direction_reg[6] = 0x00;
+}
+
+void g65265_device::state_import(const device_state_entry &entry)
+{
+	// TODO
+}
+
+void g65265_device::state_export(const device_state_entry &entry)
+{
+	// TODO
+}
+
+void g65265_device::g65265_map(address_map &map)
+{
+	// TODO ports 0 - 3, predicated on BCR0
+
+	// Port data registers
+	map(0xdf20, 0xdf22).r(FUNC(g65265_device::pd_r<4>));
+	map(0xdf20, 0xdf23).w(FUNC(g65265_device::pd_w<4>));
+
+	// Port data direction registers
+	map(0xdf24, 0xdf26).rw(FUNC(g65265_device::pdd_r<4>), FUNC(g65265_device::pdd_w<4>));
+}
+
+template<int N>
+u8 g65265_device::pd_r(offs_t offset)
+{
+	return m_port_data_reg[N + offset];
+}
+
+template<int N>
+u8 g65265_device::pdd_r(offs_t offset)
+{
+	return m_port_data_direction_reg[N + offset];
+}
+
+template<int N>
+void g65265_device::pd_w(offs_t offset, u8 data)
+{
+	offset += N;
+
+	// If PDDR is 0, use existing data; if PDDR is 1, use new data.
+	const u8 dir = m_port_data_direction_reg[offset];
+	m_port_data_reg[offset] = (m_port_data_reg[offset] & ~dir) | (data & dir);
+	m_out_port_cb[offset](m_port_data_reg[offset]);
+}
+
+template<int N>
+void g65265_device::pdd_w(offs_t offset, u8 data)
+{
+	m_port_data_direction_reg[N + offset] = data;
 }
 
 
