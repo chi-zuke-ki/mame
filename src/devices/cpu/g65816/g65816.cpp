@@ -1130,11 +1130,13 @@ void g65265_device::device_reset()
 void g65265_device::state_import(const device_state_entry &entry)
 {
 	// TODO
+	g65816_device::state_import(entry);
 }
 
 void g65265_device::state_export(const device_state_entry &entry)
 {
 	// TODO
+	g65816_device::state_export(entry);
 }
 
 void g65265_device::g65265_map(address_map &map)
