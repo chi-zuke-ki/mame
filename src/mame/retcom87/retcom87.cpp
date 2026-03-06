@@ -3,13 +3,58 @@
 #include "bus/sms_ctrl/controllers.h"
 #include "bus/sms_ctrl/smsctrl.h"
 #include "cpu/g65816/g65816.h"
+#include "imagedev/cartrom.h"
 #include "sound/ay8910.h"
 #include "video/tms9928a.h"
 
 #include "speaker.h"
 
+
+// --------------------------------------------------------------------------
+// Flash ROM which can be attached to a W65C265SXB, as found in the RetCom87.
+// The W65C265SXB monitor will automatically run code in this ROM if it is
+// present and starts with the ASCII bytes "WDC". It can be provided to the
+// emulator as a separate file via the -rom flag. ROMs loaded this way must
+// start with the bytes "WDC" at logical address 0x8000 and with the code to
+// execute starting at 0x8004.
+// --------------------------------------------------------------------------
+
+DECLARE_DEVICE_TYPE(RETCOM87_FLASH_ROM, retcom87_flash_rom_device)
+
+class retcom87_flash_rom_device : public device_t,
+                                  public device_rom_image_interface
+{
+public:
+	retcom87_flash_rom_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+		: device_t(mconfig, RETCOM87_FLASH_ROM, tag, owner, clock)
+		, device_rom_image_interface(mconfig, *this)
+	{ }
+
+	bool is_reset_on_load() const noexcept override { return true; }
+	const char *file_extensions() const noexcept override { return "bin"; }
+
+	std::pair<std::error_condition, std::string> call_load() override
+	{
+		// Read the ROM file's data into machine memory at 0x8000.
+		fread(machine().memory().region_find(":maincpu")->base() + 0x8000, 0x6000);
+
+		// Return defaults, indicating no error.
+		return std::make_pair(std::error_condition(), std::string());
+	}
+
+protected:
+	void device_start() override ATTR_COLD {}
+};
+
+DEFINE_DEVICE_TYPE(RETCOM87_FLASH_ROM, retcom87_flash_rom_device, "retcom87_flash_rom", "RetCom87 Flash ROM")
+
+
 namespace
 {
+
+// ----------------------
+// RetCom87 Driver class.
+// ----------------------
 
 class retcom87_state : public driver_device
 {
@@ -21,6 +66,7 @@ public:
 			, m_ymsnd_1(*this, "ym2149_1")
 			, m_vdp(*this, "tms9918")
 			, m_md_ctrl_ports(*this, { "md_ctrl_0", "md_ctrl_1" })
+			, m_flash_rom(*this, "flash_rom")
 	{ }
 
 	void init() {}
@@ -32,6 +78,7 @@ private:
 	required_device<ym2149_device> m_ymsnd_1;
 	required_device<tms9918_device> m_vdp;
 	required_device_array<sms_control_port_device, 2> m_md_ctrl_ports;
+	required_device<retcom87_flash_rom_device> m_flash_rom;
 
 	void main_memmap(address_map &map);
 
@@ -70,6 +117,9 @@ void retcom87_state::retcom87(machine_config &config)
 	}
 
 	m_maincpu->out_pd5_cb().set(FUNC(retcom87_state::pd5_write));
+
+	// flash rom
+	RETCOM87_FLASH_ROM(config, m_flash_rom, XTAL(3'686'400));
 }
 
 // see MAME docs on memory: https://docs.mamedev.org/techspecs/memory.html
@@ -125,26 +175,21 @@ void retcom87_state::pd5_write(u8 data)
 }
 
 INPUT_PORTS_START(retcom87_inputs)
-
 INPUT_PORTS_END
 
 ROM_START(retcom87)
 ROM_REGION(0x10000, "maincpu", 0)
 
-// HACK: for now, uncomment the ROM_LOAD line for the corresponding program to run
-// need to figure out a better way to handle roms
-
-// display test
-ROM_LOAD("textdemo.bin", 0x8000, 0x8000, CRC(4cf363dc) SHA1(bed707ec2ebb3e6cddfc6db58d78e436af05961a))
-
-// sound test
-// ROM_LOAD("soundtest.bin", 0x8000, 0x8000, CRC(7a828be3) SHA1(3b6487dbec7407e628b900877aae976f706a4d51))
-
-// monitor rom test
-// ROM_LOAD("monitor.bin", 0xE000, 0x2000, CRC(9575d641) SHA1(56ca218c0ed3d8fd631ee03690c0815b1441d0d4))
+// Monitor rom
+ROM_LOAD("monitor.bin", 0xE000, 0x2000, CRC(9575d641) SHA1(56ca218c0ed3d8fd631ee03690c0815b1441d0d4))
 
 ROM_END
 
 } // namespace
+
+
+// ------------------------------
+// RetCom87 emulator declaration.
+// ------------------------------
 
 COMP(2023, retcom87, 0, 0, retcom87, retcom87_inputs, retcom87_state, init, "Lantertronics", "RetCom87", MACHINE_NOT_WORKING)
