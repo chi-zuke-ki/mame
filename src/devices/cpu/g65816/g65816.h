@@ -1563,6 +1563,7 @@ public:
 
 protected:
 	// device-level overrides
+	virtual void device_start() override ATTR_COLD;
 	virtual void device_reset() override ATTR_COLD;
 
 	// device_state_interface overrides
@@ -1578,10 +1579,25 @@ private:
 	template<int N> void pd_w(offs_t offset, u8 data);
 	template<int N> void pdd_w(offs_t offset, u8 data);
 
-	u8 m_port_data_reg[8];
-	u8 m_port_data_direction_reg[7];
+	void ter_w(offs_t offset, u8 data);
+	void tier_w(offs_t offset, u8 data);
+
+	u8 tl_r(offs_t offset);
+	void tl_w(offs_t offset, u8 data);
+
+	void timer_stop(int timer_index);
+	void timer_start(int timer_index);
+	TIMER_CALLBACK_MEMBER(timer_interrupt);
+
+	u8 m_port_data_reg[8]{};
+	u8 m_port_data_direction_reg[7]{};
 
 	devcb_write8::array<8> m_out_port_cb;
+
+	u8 m_timer_enable_reg = 0;
+	u8 m_timer_interrupt_enable_reg = 0;
+	u8 m_timer_latch_reg[16]{};
+	emu_timer *m_timer[8]{};
 };
 
 

@@ -1096,10 +1096,22 @@ int g65816_device::bus_5A22_cycle_burst(unsigned addr)
 }
 
 
+#define VECTOR_TI    0xff80      /* Timer Interrupt 0 */
+
 g65265_device::g65265_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
 	: g65816_device(mconfig, G65265, tag, owner, clock, CPU_TYPE_W65C816, address_map_constructor(FUNC(g65265_device::g65265_map), this))
 	, m_out_port_cb(*this)
 {
+}
+
+void g65265_device::device_start()
+{
+	g65816_device::device_start();
+
+	for (int i = 0; i < 8; ++i)
+	{
+		m_timer[i] = timer_alloc(FUNC(g65265_device::timer_interrupt), this);
+	}
 }
 
 void g65265_device::device_reset()
@@ -1125,6 +1137,11 @@ void g65265_device::device_reset()
 	m_port_data_direction_reg[4] = 0x00;
 	m_port_data_direction_reg[5] = 0x00;
 	m_port_data_direction_reg[6] = 0x00;
+
+	m_timer_enable_reg = 0x00;
+	m_timer_interrupt_enable_reg = 0x00;
+
+	// Note: Timer latch registers are explicitly uninitialized.
 }
 
 void g65265_device::state_import(const device_state_entry &entry)
@@ -1149,6 +1166,15 @@ void g65265_device::g65265_map(address_map &map)
 
 	// Port data direction registers
 	map(0xdf24, 0xdf26).rw(FUNC(g65265_device::pdd_r<4>), FUNC(g65265_device::pdd_w<4>));
+
+	// Timer enable register
+	map(0xdf43, 0xdf43).w(FUNC(g65265_device::ter_w));
+
+	// Timer interrupt enable register
+	map(0xdf46, 0xdf46).w(FUNC(g65265_device::tier_w));
+
+	// Timer latch registers
+	map(0xdf50, 0xdf5f).rw(FUNC(g65265_device::tl_r), FUNC(g65265_device::tl_w));
 }
 
 template<int N>
@@ -1178,6 +1204,80 @@ template<int N>
 void g65265_device::pdd_w(offs_t offset, u8 data)
 {
 	m_port_data_direction_reg[N + offset] = data;
+}
+
+void g65265_device::ter_w(offs_t offset, u8 data)
+{
+	for (int i = 0; i < 8; ++i)
+	{
+		if (BIT(data, i) && !BIT(m_timer_enable_reg, i))
+		{
+			timer_start(i);
+		}
+		else if (!BIT(data, i) && BIT(m_timer_enable_reg, i))
+		{
+			timer_stop(i);
+		}
+	}
+
+	m_timer_enable_reg = data;
+}
+
+void g65265_device::tier_w(offs_t offset, u8 data)
+{
+	m_timer_interrupt_enable_reg = data;
+}
+
+u8 g65265_device::tl_r(offs_t offset)
+{
+	return m_timer_latch_reg[offset];
+}
+
+void g65265_device::tl_w(offs_t offset, u8 data)
+{
+	m_timer_latch_reg[offset] = data;
+
+	int timer_index = offset / 2;
+	if (BIT(m_timer_enable_reg, timer_index))
+	{
+		timer_start(timer_index);
+	}
+}
+
+void g65265_device::timer_stop(int timer_index)
+{
+	m_timer[timer_index]->reset();
+}
+
+void g65265_device::timer_start(int timer_index)
+{
+	// Timer period is taken from the corresponding timer latch register.
+	u64 lo = m_timer_latch_reg[2 * timer_index];
+	u64 hi = m_timer_latch_reg[2 * timer_index + 1];
+	u64 cycles = (hi << 8) | lo;
+
+	// Timer 2 is scaled by 16.
+	cycles = (timer_index == 2) ? (16 * cycles) : cycles;
+
+	attotime duration = cycles_to_attotime(cycles);
+	m_timer[timer_index]->adjust(duration, timer_index, duration);
+}
+
+TIMER_CALLBACK_MEMBER(g65265_device::timer_interrupt)
+{
+	CPU_STOPPED &= ~STOP_LEVEL_WAI;
+	if (CPU_STOPPED)
+	{
+		return;
+	}
+
+	s32 timer_index = param;
+	if (!BIT(m_timer_interrupt_enable_reg, timer_index))
+	{
+		return;
+	}
+
+	g65816i_interrupt_hardware(VECTOR_TI + 2 * timer_index);
 }
 
 
