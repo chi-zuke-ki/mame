@@ -35,8 +35,8 @@ public:
 
 	std::pair<std::error_condition, std::string> call_load() override
 	{
-		// Read the ROM file's data into machine memory at 0x8000.
-		fread(machine().memory().region_find(":maincpu")->base() + 0x8000, 0x6000);
+		// Read the ROM file's data into machine memory at 0x8000 to 0xDEFF.
+		fread(machine().memory().region_find(":maincpu")->base() + 0x8000, 0x5F00);
 
 		// Return defaults, indicating no error.
 		return std::make_pair(std::error_condition(), std::string());
