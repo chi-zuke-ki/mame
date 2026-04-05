@@ -153,8 +153,8 @@ void retcom87_state::main_memmap(address_map &map)
 	// referenced src/mame/bandai/sv8000.cpp, src/mame/atari/atarist.cpp
 	map(0xdf10, 0xdf10).w(m_ymsnd_0, FUNC(ay8910_device::data_w));
 	map(0xdf11, 0xdf11).w(m_ymsnd_0, FUNC(ay8910_device::address_w));
-	map(0xdf14, 0xdf14).w(m_ymsnd_1, FUNC(ay8910_device::data_w));
-	map(0xdf15, 0xdf15).w(m_ymsnd_1, FUNC(ay8910_device::address_w));
+	map(0xdf12, 0xdf12).w(m_ymsnd_1, FUNC(ay8910_device::data_w));
+	map(0xdf13, 0xdf13).w(m_ymsnd_1, FUNC(ay8910_device::address_w));
 
 	// controllers
 	// DF00-DF03: Controller 1 through 4 inputs (aliased to DF04-DF07)
