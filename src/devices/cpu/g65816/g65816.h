@@ -63,6 +63,8 @@ public:
 protected:
 	g65816_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, int cpu_type, address_map_constructor internal);
 
+	g65816_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, int cpu_type, address_map_constructor internal, uint16_t vector_irq_n, uint16_t vector_nmi_n, uint16_t vector_abort_n, uint16_t vector_brk_n, uint16_t vector_cop_n);
+
 	// device-level overrides
 	virtual void device_start() override ATTR_COLD;
 	virtual void device_reset() override ATTR_COLD;
@@ -248,6 +250,13 @@ protected:
 	int m_cpu_type;
 	uint8_t m_divider;
 	uint32_t m_debugger_temp;
+
+	/* Addresses that can differ between CPUs */
+	const uint16_t m_vector_irq_n;
+	const uint16_t m_vector_nmi_n;
+	const uint16_t m_vector_abort_n;
+	const uint16_t m_vector_brk_n;
+	const uint16_t m_vector_cop_n;
 
 	/* 5A22 specific registers */
 	uint8_t m_wrmpya, m_wrmpyb;

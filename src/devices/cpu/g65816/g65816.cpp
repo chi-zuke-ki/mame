@@ -127,6 +127,11 @@ g65802_device::g65802_device(const machine_config &mconfig, const char *tag, dev
 
 
 g65816_device::g65816_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, int cpu_type, address_map_constructor internal)
+	: g65816_device(mconfig, G65802, tag, owner, clock, cpu_type, internal, VECTOR_IRQ_N_65816, VECTOR_NMI_N_65816, VECTOR_ABORT_N_65816, VECTOR_BRK_N_65816, VECTOR_COP_N_65816)
+{
+}
+
+g65816_device::g65816_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, int cpu_type, address_map_constructor internal, uint16_t vector_irq_n, uint16_t vector_nmi_n, uint16_t vector_abort_n, uint16_t vector_brk_n, uint16_t vector_cop_n)
 	: cpu_device(mconfig, type, tag, owner, clock)
 	, m_program_config("program", ENDIANNESS_LITTLE, 8, (cpu_type == CPU_TYPE_W65C802) ? 16 : 24, 0, internal)
 	, m_data_config("data", ENDIANNESS_LITTLE, 8, (cpu_type == CPU_TYPE_W65C802) ? 16 : 24, 0, internal)
@@ -134,6 +139,11 @@ g65816_device::g65816_device(const machine_config &mconfig, device_type type, co
 	, m_vector_config("vectors", ENDIANNESS_LITTLE, 8, 5, 0)
 	, m_wdm_w(*this)
 	, m_cpu_type(cpu_type)
+	, m_vector_irq_n(vector_irq_n)
+	, m_vector_nmi_n(vector_nmi_n)
+	, m_vector_abort_n(vector_abort_n)
+	, m_vector_brk_n(vector_brk_n)
+	, m_vector_cop_n(vector_cop_n)
 {
 }
 
@@ -1099,7 +1109,7 @@ int g65816_device::bus_5A22_cycle_burst(unsigned addr)
 #define VECTOR_TI    0xff80      /* Timer Interrupt 0 */
 
 g65265_device::g65265_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: g65816_device(mconfig, G65265, tag, owner, clock, CPU_TYPE_W65C816, address_map_constructor(FUNC(g65265_device::g65265_map), this))
+	: g65816_device(mconfig, G65265, tag, owner, clock, CPU_TYPE_W65C816, address_map_constructor(FUNC(g65265_device::g65265_map), this), VECTOR_IRQ_N_65265, VECTOR_NMI_N_65265, VECTOR_ABORT_N_65265, VECTOR_BRK_N_65265, VECTOR_COP_N_65265)
 	, m_out_port_cb(*this)
 {
 }

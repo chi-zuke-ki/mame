@@ -104,11 +104,23 @@
 #define VECTOR_BRK_E    0xfffe      /* Break Instruction */
 #define VECTOR_COP_E    0xfff4      /* Coprocessor instruction */
 
-#define VECTOR_IRQ_N    0xffee      /* Interrupt Request */
-#define VECTOR_NMI_N    0xffea      /* Non-Maskable Interrupt */
-#define VECTOR_ABORT_N  0xffe8      /* ABORT asserted */
-#define VECTOR_BRK_N    0xffe6      /* Break Instruction */
-#define VECTOR_COP_N    0xffe4      /* Coprocessor instruction */
+#define VECTOR_IRQ_N    m_vector_irq_n      /* Interrupt Request */
+#define VECTOR_NMI_N    m_vector_nmi_n      /* Non-Maskable Interrupt */
+#define VECTOR_ABORT_N  m_vector_abort_n    /* ABORT asserted */
+#define VECTOR_BRK_N    m_vector_brk_n      /* Break Instruction */
+#define VECTOR_COP_N    m_vector_cop_n      /* Coprocessor instruction */
+
+#define VECTOR_IRQ_N_65816    0xffee
+#define VECTOR_NMI_N_65816    0xffea
+#define VECTOR_ABORT_N_65816  0xffe8
+#define VECTOR_BRK_N_65816    0xffe6
+#define VECTOR_COP_N_65816    0xffe4
+
+#define VECTOR_IRQ_N_65265    0xff9e
+#define VECTOR_NMI_N_65265    0xffba
+#define VECTOR_ABORT_N_65265  0xffb8
+#define VECTOR_BRK_N_65265    0xffb6
+#define VECTOR_COP_N_65265    0xffb4
 
 
 /* ======================================================================== */
