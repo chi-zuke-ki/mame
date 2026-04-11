@@ -707,6 +707,11 @@ void g65816_device::g65816i_interrupt_software(unsigned vector)
 
 void g65816_device::g65816i_interrupt_nmi()
 {
+	if (!interrupt_nmi_enabled())
+	{
+		return;
+	}
+
 	standard_irq_callback(G65816_LINE_NMI, g65816_get_pc());
 	if (FLAG_E)
 	{
@@ -732,7 +737,7 @@ void g65816_device::g65816i_interrupt_nmi()
 
 void g65816_device::g65816i_check_maskable_interrupt()
 {
-	if(!(CPU_STOPPED & STOP_LEVEL_STOP) && LINE_IRQ && !FLAG_I)
+	if(!(CPU_STOPPED & STOP_LEVEL_STOP) && LINE_IRQ && !FLAG_I && interrupt_irq_enabled())
 	{
 		g65816i_interrupt_hardware((FLAG_E) ? VECTOR_IRQ_E : VECTOR_IRQ_N);
 		CPU_STOPPED &= ~STOP_LEVEL_WAI;
@@ -1184,6 +1189,9 @@ void g65265_device::g65265_map(address_map &map)
 	// Port data direction registers
 	map(0xdf24, 0xdf26).rw(FUNC(g65265_device::pdd_r<4>), FUNC(g65265_device::pdd_w<4>));
 
+	// Bus control register
+	map(0xdf40, 0xdf40).rw(FUNC(g65265_device::bcr_r), FUNC(g65265_device::bcr_w));
+
 	// System speed control register
 	map(0xdf41, 0xdf41).rw(FUNC(g65265_device::sscr_r), FUNC(g65265_device::sscr_w));
 
@@ -1192,6 +1200,9 @@ void g65265_device::g65265_map(address_map &map)
 
 	// Timer interrupt enable register
 	map(0xdf46, 0xdf46).w(FUNC(g65265_device::tier_w));
+
+	// Edge interrupt flag register
+	map(0xdf47, 0xdf47).rw(FUNC(g65265_device::eier_r), FUNC(g65265_device::eier_w));
 
 	// Timer latch registers
 	map(0xdf50, 0xdf5f).rw(FUNC(g65265_device::tl_r), FUNC(g65265_device::tl_w));
@@ -1224,6 +1235,16 @@ template<int N>
 void g65265_device::pdd_w(offs_t offset, u8 data)
 {
 	m_port_data_direction_reg[N + offset] = data;
+}
+
+u8 g65265_device::bcr_r()
+{
+	return m_bcr;
+}
+
+void g65265_device::bcr_w(u8 data)
+{
+	m_bcr = data;
 }
 
 u8 g65265_device::sscr_r(offs_t offset)
@@ -1275,6 +1296,16 @@ void g65265_device::ter_w(offs_t offset, u8 data)
 void g65265_device::tier_w(offs_t offset, u8 data)
 {
 	m_timer_interrupt_enable_reg = data;
+}
+
+u8 g65265_device::eier_r()
+{
+	return m_eier;
+}
+
+void g65265_device::eier_w(u8 data)
+{
+	m_eier = data;
 }
 
 u8 g65265_device::tl_r(offs_t offset)

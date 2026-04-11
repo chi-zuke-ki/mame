@@ -258,6 +258,10 @@ protected:
 	const uint16_t m_vector_brk_n;
 	const uint16_t m_vector_cop_n;
 
+	/* Interrupt enable logic */
+	virtual bool interrupt_irq_enabled() { return true; }
+	virtual bool interrupt_nmi_enabled() { return true; }
+
 	/* 5A22 specific registers */
 	uint8_t m_wrmpya, m_wrmpyb;
 	uint16_t m_rdmpy;
@@ -1581,8 +1585,15 @@ protected:
 	virtual void state_import(const device_state_entry &entry) override;
 	virtual void state_export(const device_state_entry &entry) override;
 
+	// 65816-specific overrides
+	virtual bool interrupt_irq_enabled() override { return BIT(m_eier, 7); }
+	virtual bool interrupt_nmi_enabled() override { return BIT(m_bcr, 6); }
+
 private:
 	void g65265_map(address_map &map);
+
+	u8 bcr_r();
+	void bcr_w(u8 data);
 
 	template<int N> u8 pd_r(offs_t offset);
 	template<int N> u8 pdd_r(offs_t offset);
@@ -1596,12 +1607,18 @@ private:
 	void ter_w(offs_t offset, u8 data);
 	void tier_w(offs_t offset, u8 data);
 
+	u8 eier_r();
+	void eier_w(u8 data);
+
 	u8 tl_r(offs_t offset);
 	void tl_w(offs_t offset, u8 data);
 
 	void timer_stop(int timer_index);
 	void timer_start(int timer_index);
 	TIMER_CALLBACK_MEMBER(timer_interrupt);
+
+	u8 m_bcr = 0;
+	u8 m_eier = 0;
 
 	u8 m_port_data_reg[8]{};
 	u8 m_port_data_direction_reg[7]{};
