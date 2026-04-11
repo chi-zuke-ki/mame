@@ -82,6 +82,7 @@ private:
 
 	void main_memmap(address_map &map);
 
+	void vdp_interrupt(int data);
 	void pd5_write(u8 data);
 };
 
@@ -110,6 +111,9 @@ void retcom87_state::retcom87(machine_config &config)
 	// define screen output
 	SCREEN(config, "screen", SCREEN_TYPE_RASTER);
 	m_vdp->set_screen("screen");
+
+	// display chip interrupt
+	m_vdp->int_callback().set(FUNC(retcom87_state::vdp_interrupt));
 
 	// controllers
 	for (auto &port : m_md_ctrl_ports) {
@@ -162,6 +166,12 @@ void retcom87_state::main_memmap(address_map &map)
 	// When Controller Select Pin output (P51, pin 4, J4-P5x connector) is 0: [Start A Start A 0 0 Down Up]
 	map(0xdf00, 0xdf00).r(m_md_ctrl_ports[0], FUNC(sms_control_port_device::in_r));
 	map(0xdf01, 0xdf01).r(m_md_ctrl_ports[1], FUNC(sms_control_port_device::in_r));
+}
+
+void retcom87_state::vdp_interrupt(int data)
+{
+	// Display chip interrupt output is wired to the IRQB pin (P41)
+	m_maincpu->g65816_set_reg(g65816_device::G65816_IRQ_STATE, data);
 }
 
 // Write to port 5 data register
