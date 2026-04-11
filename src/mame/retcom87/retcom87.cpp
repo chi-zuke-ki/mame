@@ -88,7 +88,7 @@ private:
 
 void retcom87_state::retcom87(machine_config &config)
 {
-	G65265(config, m_maincpu, XTAL(3'686'400));
+	G65265(config, m_maincpu, XTAL(32'768), XTAL(3'686'400));
 	m_maincpu->set_addrmap(AS_PROGRAM, &retcom87_state::main_memmap);
 
 	// sound chip

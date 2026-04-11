@@ -1108,9 +1108,16 @@ int g65816_device::bus_5A22_cycle_burst(unsigned addr)
 
 #define VECTOR_TI    0xff80      /* Timer Interrupt 0 */
 
-g65265_device::g65265_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+g65265_device::g65265_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock, XTAL fast_clock)
 	: g65816_device(mconfig, G65265, tag, owner, clock, CPU_TYPE_W65C816, address_map_constructor(FUNC(g65265_device::g65265_map), this), VECTOR_IRQ_N_65265, VECTOR_NMI_N_65265, VECTOR_ABORT_N_65265, VECTOR_BRK_N_65265, VECTOR_COP_N_65265)
 	, m_out_port_cb(*this)
+	, m_clk(clock)
+	, m_fclk(fast_clock.value())
+{
+}
+
+g65265_device::g65265_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+	: g65265_device(mconfig, tag, owner, clock, XTAL(clock))
 {
 }
 
@@ -1177,6 +1184,9 @@ void g65265_device::g65265_map(address_map &map)
 	// Port data direction registers
 	map(0xdf24, 0xdf26).rw(FUNC(g65265_device::pdd_r<4>), FUNC(g65265_device::pdd_w<4>));
 
+	// System speed control register
+	map(0xdf41, 0xdf41).rw(FUNC(g65265_device::sscr_r), FUNC(g65265_device::sscr_w));
+
 	// Timer enable register
 	map(0xdf43, 0xdf43).w(FUNC(g65265_device::ter_w));
 
@@ -1214,6 +1224,35 @@ template<int N>
 void g65265_device::pdd_w(offs_t offset, u8 data)
 {
 	m_port_data_direction_reg[N + offset] = data;
+}
+
+u8 g65265_device::sscr_r(offs_t offset)
+{
+	return m_sscr;
+}
+
+void g65265_device::sscr_w(offs_t offset, u8 data)
+{
+	m_sscr = data;
+
+	bool start = BIT(m_sscr, 0);
+	bool enable = BIT(m_sscr, 1);
+
+	if (enable)
+	{
+		if (!start)
+		{
+			CPU_STOPPED |= STOP_LEVEL_STOP;
+		}
+		else
+		{
+			set_clock(m_fclk);
+		}
+	}
+	else
+	{
+		set_clock(m_clk);
+	}
 }
 
 void g65265_device::ter_w(offs_t offset, u8 data)

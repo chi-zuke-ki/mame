@@ -1559,6 +1559,8 @@ public:
 class g65265_device : public g65816_device
 {
 public:
+	g65265_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock, XTAL fast_clock);
+
 	g65265_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
 	auto out_pd0_cb() { return m_out_port_cb[0].bind(); }
@@ -1588,6 +1590,9 @@ private:
 	template<int N> void pd_w(offs_t offset, u8 data);
 	template<int N> void pdd_w(offs_t offset, u8 data);
 
+	u8 sscr_r(offs_t offset);
+	void sscr_w(offs_t offset, u8 data);
+
 	void ter_w(offs_t offset, u8 data);
 	void tier_w(offs_t offset, u8 data);
 
@@ -1602,6 +1607,12 @@ private:
 	u8 m_port_data_direction_reg[7]{};
 
 	devcb_write8::array<8> m_out_port_cb;
+
+	u8 m_sscr = 0;
+
+	// Clock and fast clock.
+	const uint32_t m_clk;
+	const uint32_t m_fclk;
 
 	u8 m_timer_enable_reg = 0;
 	u8 m_timer_interrupt_enable_reg = 0;
