@@ -4,10 +4,13 @@
 #include "bus/sms_ctrl/smsctrl.h"
 #include "cpu/g65816/g65816.h"
 #include "imagedev/cartrom.h"
+#include "machine/pckeybrd.h"
 #include "sound/ay8910.h"
 #include "video/tms9928a.h"
 
 #include "speaker.h"
+
+#include <deque>
 
 
 // --------------------------------------------------------------------------
@@ -67,10 +70,17 @@ public:
 			, m_vdp(*this, "tms9918")
 			, m_md_ctrl_ports(*this, { "md_ctrl_0", "md_ctrl_1" })
 			, m_flash_rom(*this, "flash_rom")
+			, m_kbd(*this, "keyboard")
 	{ }
 
-	void init() {}
 	void retcom87(machine_config &config);
+
+protected:
+	void device_start() override ATTR_COLD
+	{
+		driver_device::device_start();
+		m_keyboard_timer = timer_alloc(FUNC(retcom87_state::keyboard_tick), this);
+	}
 
 private:
 	required_device<g65265_device> m_maincpu;
@@ -79,10 +89,20 @@ private:
 	required_device<tms9918_device> m_vdp;
 	required_device_array<sms_control_port_device, 2> m_md_ctrl_ports;
 	required_device<retcom87_flash_rom_device> m_flash_rom;
+	required_device<at_keyboard_device> m_kbd;
+
+	// Pretend we have a keyboard running at 16 kHz.
+	static constexpr int m_keyboard_frequency = 1 << 14;
+	TIMER_CALLBACK_MEMBER(keyboard_tick);
+	std::deque<u8> m_keyboard_data_queue;
+	emu_timer *m_keyboard_timer;
 
 	void main_memmap(address_map &map);
 
 	void vdp_interrupt(int data);
+	void keypress(int data);
+
+	u8 pd4_read();
 	void pd5_write(u8 data);
 };
 
@@ -124,6 +144,12 @@ void retcom87_state::retcom87(machine_config &config)
 
 	// flash rom
 	RETCOM87_FLASH_ROM(config, m_flash_rom, XTAL(3'686'400));
+
+	// keyboard
+	AT_KEYB(config, m_kbd, at_keyboard_device::KEYBOARD_TYPE::AT, /*default_set=*/2);
+	m_kbd->keypress().set(FUNC(retcom87_state::keypress));
+
+	m_maincpu->in_pd4_cb().set(FUNC(retcom87_state::pd4_read));
 }
 
 // see MAME docs on memory: https://docs.mamedev.org/techspecs/memory.html
@@ -174,6 +200,50 @@ void retcom87_state::vdp_interrupt(int data)
 	m_maincpu->g65816_set_reg(g65816_device::G65816_IRQ_STATE, data);
 }
 
+void retcom87_state::keypress(int data)
+{
+	u8 chr = m_kbd->read();
+
+	m_keyboard_data_queue.push_back(1);
+	m_keyboard_data_queue.push_back(0);
+
+	u8 parity = 0;
+	for (int i = 0; i < 8; ++i)
+	{
+		m_keyboard_data_queue.push_back(BIT(chr, 0));
+		parity ^= BIT(chr, 0);
+		chr >>= 1;
+	}
+
+	m_keyboard_data_queue.push_back(!parity);
+
+	if (!m_keyboard_timer->enabled())
+	{
+		attotime duration = attotime::from_hz(m_keyboard_frequency);
+		m_keyboard_timer->adjust(duration, 0);
+	}
+}
+
+TIMER_CALLBACK_MEMBER(retcom87_state::keyboard_tick)
+{
+	int nmi_signal = param;
+	m_maincpu->g65816_set_reg(g65816_device::G65816_NMI_STATE, nmi_signal);
+
+	if (!nmi_signal || m_keyboard_data_queue.size() > 1)
+	{
+		attotime duration = attotime::from_hz(m_keyboard_frequency);
+		m_keyboard_timer->adjust(duration, !nmi_signal);
+	}
+}
+
+u8 retcom87_state::pd4_read()
+{
+	// Port 4 bit 2 (P42) maps to keyboard data bit
+	u8 data = m_keyboard_data_queue.front();
+	m_keyboard_data_queue.pop_front();
+	return BIT(data, 0) << 2;
+}
+
 // Write to port 5 data register
 void retcom87_state::pd5_write(u8 data)
 {
@@ -202,4 +272,4 @@ ROM_END
 // RetCom87 emulator declaration.
 // ------------------------------
 
-COMP(2023, retcom87, 0, 0, retcom87, retcom87_inputs, retcom87_state, init, "Lantertronics", "RetCom87", MACHINE_NOT_WORKING)
+COMP(2023, retcom87, 0, 0, retcom87, retcom87_inputs, retcom87_state, empty_init, "Lantertronics", "RetCom87", MACHINE_NOT_WORKING)

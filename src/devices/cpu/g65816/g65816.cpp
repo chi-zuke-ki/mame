@@ -1115,6 +1115,7 @@ int g65816_device::bus_5A22_cycle_burst(unsigned addr)
 
 g65265_device::g65265_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock, XTAL fast_clock)
 	: g65816_device(mconfig, G65265, tag, owner, clock, CPU_TYPE_W65C816, address_map_constructor(FUNC(g65265_device::g65265_map), this), VECTOR_IRQ_N_65265, VECTOR_NMI_N_65265, VECTOR_ABORT_N_65265, VECTOR_BRK_N_65265, VECTOR_COP_N_65265)
+	, m_in_port_cb(*this, 0)
 	, m_out_port_cb(*this)
 	, m_clk(clock)
 	, m_fclk(fast_clock.value())
@@ -1211,7 +1212,8 @@ void g65265_device::g65265_map(address_map &map)
 template<int N>
 u8 g65265_device::pd_r(offs_t offset)
 {
-	return m_port_data_reg[N + offset];
+	const u8 dir = m_port_data_direction_reg[N + offset];
+	return (m_in_port_cb[N + offset]() & ~dir) | (m_port_data_reg[N + offset] & dir);
 }
 
 template<int N>
@@ -1223,12 +1225,8 @@ u8 g65265_device::pdd_r(offs_t offset)
 template<int N>
 void g65265_device::pd_w(offs_t offset, u8 data)
 {
-	offset += N;
-
-	// If PDDR is 0, use existing data; if PDDR is 1, use new data.
-	const u8 dir = m_port_data_direction_reg[offset];
-	m_port_data_reg[offset] = (m_port_data_reg[offset] & ~dir) | (data & dir);
-	m_out_port_cb[offset](m_port_data_reg[offset]);
+	m_port_data_reg[N + offset] = data;
+	m_out_port_cb[N + offset](pd_r<N>(offset));
 }
 
 template<int N>

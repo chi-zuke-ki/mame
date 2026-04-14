@@ -1567,6 +1567,17 @@ public:
 
 	g65265_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
+	// Port data input callback bindings
+	auto in_pd0_cb() { return m_in_port_cb[0].bind(); }
+	auto in_pd1_cb() { return m_in_port_cb[1].bind(); }
+	auto in_pd2_cb() { return m_in_port_cb[2].bind(); }
+	auto in_pd3_cb() { return m_in_port_cb[3].bind(); }
+	auto in_pd4_cb() { return m_in_port_cb[4].bind(); }
+	auto in_pd5_cb() { return m_in_port_cb[5].bind(); }
+	auto in_pd6_cb() { return m_in_port_cb[6].bind(); }
+	auto in_pd7_cb() { return m_in_port_cb[7].bind(); }
+
+	// Port data output callback bindings
 	auto out_pd0_cb() { return m_out_port_cb[0].bind(); }
 	auto out_pd1_cb() { return m_out_port_cb[1].bind(); }
 	auto out_pd2_cb() { return m_out_port_cb[2].bind(); }
@@ -1623,6 +1634,7 @@ private:
 	u8 m_port_data_reg[8]{};
 	u8 m_port_data_direction_reg[7]{};
 
+	devcb_read8::array<8> m_in_port_cb;
 	devcb_write8::array<8> m_out_port_cb;
 
 	u8 m_sscr = 0;
