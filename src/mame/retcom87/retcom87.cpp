@@ -1,5 +1,10 @@
 #include "emu.h"
 
+// Includes from src/emu/
+#include "screen.h"
+#include "speaker.h"
+
+// Includes from src/devices/
 #include "bus/sms_ctrl/controllers.h"
 #include "bus/sms_ctrl/smsctrl.h"
 #include "cpu/g65816/g65816.h"
@@ -8,8 +13,7 @@
 #include "sound/ay8910.h"
 #include "video/tms9928a.h"
 
-#include "speaker.h"
-
+// Standard library includes
 #include <deque>
 
 
@@ -92,7 +96,7 @@ private:
 	required_device<at_keyboard_device> m_kbd;
 
 	// Pretend we have a keyboard running at 16 kHz.
-	static constexpr int m_keyboard_frequency = 1 << 14;
+	static constexpr u32 m_keyboard_frequency = 1 << 14;
 	emu_timer *m_keyboard_timer;
 	TIMER_CALLBACK_MEMBER(keyboard_tick);
 	std::deque<u8> m_keyboard_data_queue;
@@ -179,8 +183,8 @@ void retcom87_state::main_memmap(address_map &map)
 	// sound
 	// DF10: Data Send for YM2149 soundchip #1
 	// DF11: Register Select for YM2149 soundchip #1
-	// DF14: Data Send for YM2149 soundchip #2
-	// DF15: Register Select for YM2149 soundchip #2
+	// DF12: Data Send for YM2149 soundchip #2
+	// DF13: Register Select for YM2149 soundchip #2
 	// referenced src/mame/bandai/sv8000.cpp, src/mame/atari/atarist.cpp
 	map(0xdf10, 0xdf10).w(m_ymsnd_0, FUNC(ay8910_device::data_w));
 	map(0xdf11, 0xdf11).w(m_ymsnd_0, FUNC(ay8910_device::address_w));
@@ -208,15 +212,14 @@ void retcom87_state::keypress(int data)
 	m_keyboard_data_queue.push_back(1);
 	m_keyboard_data_queue.push_back(0);
 
-	u8 parity = 0;
+	u8 parity = 1;
 	for (int i = 0; i < 8; ++i)
 	{
-		m_keyboard_data_queue.push_back(BIT(chr, 0));
-		parity ^= BIT(chr, 0);
-		chr >>= 1;
+		m_keyboard_data_queue.push_back(BIT(chr, i));
+		parity ^= BIT(chr, i);
 	}
 
-	m_keyboard_data_queue.push_back(!parity);
+	m_keyboard_data_queue.push_back(parity);
 
 	if (!m_keyboard_timer->enabled())
 	{
