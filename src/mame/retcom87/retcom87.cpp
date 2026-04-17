@@ -93,9 +93,10 @@ private:
 
 	// Pretend we have a keyboard running at 16 kHz.
 	static constexpr int m_keyboard_frequency = 1 << 14;
+	emu_timer *m_keyboard_timer;
 	TIMER_CALLBACK_MEMBER(keyboard_tick);
 	std::deque<u8> m_keyboard_data_queue;
-	emu_timer *m_keyboard_timer;
+	u8 m_keyboard_data = 0;
 
 	void main_memmap(address_map &map);
 
@@ -227,9 +228,15 @@ void retcom87_state::keypress(int data)
 TIMER_CALLBACK_MEMBER(retcom87_state::keyboard_tick)
 {
 	int nmi_signal = param;
+	if (nmi_signal)
+	{
+		m_keyboard_data = m_keyboard_data_queue.front();
+		m_keyboard_data_queue.pop_front();
+	}
+
 	m_maincpu->g65816_set_reg(g65816_device::G65816_NMI_STATE, nmi_signal);
 
-	if (!nmi_signal || m_keyboard_data_queue.size() > 1)
+	if (!m_keyboard_data_queue.empty())
 	{
 		attotime duration = attotime::from_hz(m_keyboard_frequency);
 		m_keyboard_timer->adjust(duration, !nmi_signal);
@@ -239,9 +246,7 @@ TIMER_CALLBACK_MEMBER(retcom87_state::keyboard_tick)
 u8 retcom87_state::pd4_read()
 {
 	// Port 4 bit 2 (P42) maps to keyboard data bit
-	u8 data = m_keyboard_data_queue.front();
-	m_keyboard_data_queue.pop_front();
-	return BIT(data, 0) << 2;
+	return BIT(m_keyboard_data, 0) << 2;
 }
 
 // Write to port 5 data register
