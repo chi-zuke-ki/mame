@@ -111,6 +111,7 @@ private:
 	void pd5_write(u8 data);
 };
 
+// Initializes device components and peripherals.
 void retcom87_state::retcom87(machine_config &config)
 {
 	G65265(config, m_maincpu, XTAL(32'768), XTAL(3'686'400));
@@ -157,9 +158,7 @@ void retcom87_state::retcom87(machine_config &config)
 	m_maincpu->in_pd4_cb().set(FUNC(retcom87_state::pd4_read));
 }
 
-// see MAME docs on memory: https://docs.mamedev.org/techspecs/memory.html
-//
-// see RetCom87 docs on memory map:
+// Initializes memory map. See RetCom87 memory map docs:
 // https://github.com/lantertronics/RetCom87-hardware/wiki/RetCom87-Memory-Map
 void retcom87_state::main_memmap(address_map &map)
 {
@@ -199,12 +198,16 @@ void retcom87_state::main_memmap(address_map &map)
 	map(0xdf01, 0xdf01).r(m_md_ctrl_ports[1], FUNC(sms_control_port_device::in_r));
 }
 
+// This runs whenever the RetCom87 gets an interrupt from the display chip.
 void retcom87_state::vdp_interrupt(int data)
 {
 	// Display chip interrupt output is wired to the IRQB pin (P41)
 	m_maincpu->g65816_set_reg(g65816_device::G65816_IRQ_STATE, data);
 }
 
+// This runs whenever a keyboard key is pressed. It queues up any bits that the
+// keyboard needs to send to the CPU, and then starts emulating the keyboard
+// clock if it isn't running already.
 void retcom87_state::keypress(int data)
 {
 	u8 chr = m_kbd->read();
@@ -228,6 +231,8 @@ void retcom87_state::keypress(int data)
 	}
 }
 
+// This emulates a clock cycle of the attached PS/2 keyboard. The keyboard will
+// keep ticking as long as it has data bits to send to the CPU.
 TIMER_CALLBACK_MEMBER(retcom87_state::keyboard_tick)
 {
 	int nmi_signal = param;
@@ -246,13 +251,14 @@ TIMER_CALLBACK_MEMBER(retcom87_state::keyboard_tick)
 	}
 }
 
+// This runs any time a program reads from data port PD4.
 u8 retcom87_state::pd4_read()
 {
 	// Port 4 bit 2 (P42) maps to keyboard data bit
 	return BIT(m_keyboard_data, 0) << 2;
 }
 
-// Write to port 5 data register
+// This runs any time a program writes to data port PD5.
 void retcom87_state::pd5_write(u8 data)
 {
 	// Port 5 bit 1 (P51) maps to bit 6 of controller input
