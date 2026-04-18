@@ -209,7 +209,6 @@ void retcom87_state::keypress(int data)
 {
 	u8 chr = m_kbd->read();
 
-	m_keyboard_data_queue.push_back(1);
 	m_keyboard_data_queue.push_back(0);
 
 	u8 parity = 1;
@@ -220,6 +219,7 @@ void retcom87_state::keypress(int data)
 	}
 
 	m_keyboard_data_queue.push_back(parity);
+	m_keyboard_data_queue.push_back(1);
 
 	if (!m_keyboard_timer->enabled())
 	{
