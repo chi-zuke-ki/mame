@@ -1160,6 +1160,11 @@ void g65265_device::device_reset()
 	m_port_data_direction_reg[4] = 0x00;
 	m_port_data_direction_reg[5] = 0x00;
 	m_port_data_direction_reg[6] = 0x00;
+	m_pcs7 = 0x00;
+
+	m_bcr = 0x00;
+	m_sscr = 0x00;
+	m_eier = 0x00;
 
 	m_timer_enable_reg = 0x00;
 	m_timer_interrupt_enable_reg = 0x00;
@@ -1189,6 +1194,7 @@ void g65265_device::g65265_map(address_map &map)
 
 	// Port data direction registers
 	map(0xdf24, 0xdf26).rw(FUNC(g65265_device::pdd_r<4>), FUNC(g65265_device::pdd_w<4>));
+	map(0xdf27, 0xdf27).rw(FUNC(g65265_device::pcs7_r), FUNC(g65265_device::pcs7_w));
 
 	// Bus control register
 	map(0xdf40, 0xdf40).rw(FUNC(g65265_device::bcr_r), FUNC(g65265_device::bcr_w));
@@ -1235,6 +1241,16 @@ void g65265_device::pdd_w(offs_t offset, u8 data)
 	m_port_data_direction_reg[N + offset] = data;
 }
 
+u8 g65265_device::pcs7_r()
+{
+	return m_pcs7;
+}
+
+void g65265_device::pcs7_w(u8 data)
+{
+	m_pcs7 = data;
+}
+
 u8 g65265_device::bcr_r()
 {
 	return m_bcr;
@@ -1245,12 +1261,12 @@ void g65265_device::bcr_w(u8 data)
 	m_bcr = data;
 }
 
-u8 g65265_device::sscr_r(offs_t offset)
+u8 g65265_device::sscr_r()
 {
 	return m_sscr;
 }
 
-void g65265_device::sscr_w(offs_t offset, u8 data)
+void g65265_device::sscr_w(u8 data)
 {
 	m_sscr = data;
 
@@ -1274,7 +1290,7 @@ void g65265_device::sscr_w(offs_t offset, u8 data)
 	}
 }
 
-void g65265_device::ter_w(offs_t offset, u8 data)
+void g65265_device::ter_w(u8 data)
 {
 	for (int i = 0; i < 8; ++i)
 	{
@@ -1291,7 +1307,7 @@ void g65265_device::ter_w(offs_t offset, u8 data)
 	m_timer_enable_reg = data;
 }
 
-void g65265_device::tier_w(offs_t offset, u8 data)
+void g65265_device::tier_w(u8 data)
 {
 	m_timer_interrupt_enable_reg = data;
 }

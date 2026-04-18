@@ -1603,20 +1603,23 @@ protected:
 private:
 	void g65265_map(address_map &map);
 
-	u8 bcr_r();
-	void bcr_w(u8 data);
-
 	template<int N> u8 pd_r(offs_t offset);
 	template<int N> u8 pdd_r(offs_t offset);
 
 	template<int N> void pd_w(offs_t offset, u8 data);
 	template<int N> void pdd_w(offs_t offset, u8 data);
 
-	u8 sscr_r(offs_t offset);
-	void sscr_w(offs_t offset, u8 data);
+	u8 pcs7_r();
+	void pcs7_w(u8 data);
 
-	void ter_w(offs_t offset, u8 data);
-	void tier_w(offs_t offset, u8 data);
+	u8 bcr_r();
+	void bcr_w(u8 data);
+
+	u8 sscr_r();
+	void sscr_w(u8 data);
+
+	void ter_w(u8 data);
+	void tier_w(u8 data);
 
 	u8 eier_r();
 	void eier_w(u8 data);
@@ -1628,7 +1631,16 @@ private:
 	void timer_start(int timer_index);
 	TIMER_CALLBACK_MEMBER(timer_interrupt);
 
+	// Port 7 chip select (doesn't actually do anything yet)
+	u8 m_pcs7 = 0;
+
+	// Bus control register
 	u8 m_bcr = 0;
+
+	// System speed control register
+	u8 m_sscr = 0;
+
+	// Edge interrupt enable register
 	u8 m_eier = 0;
 
 	u8 m_port_data_reg[8]{};
@@ -1636,8 +1648,6 @@ private:
 
 	devcb_read8::array<8> m_in_port_cb;
 	devcb_write8::array<8> m_out_port_cb;
-
-	u8 m_sscr = 0;
 
 	// Clock and fast clock.
 	const uint32_t m_clk;
